@@ -2,8 +2,6 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 from sklearn.linear_model import Ridge
-from sklearn.grid_search import RandomizedSearchCV
-from scipy.stats import randint as sp_randint
 
 from utils import root_mean_squared_error as rmse, mean_absolute_deviation as mad
 import utils
@@ -37,27 +35,30 @@ def regressor_prediction(X, y, regressor_constructor):
 
 	return predictions
 
+
+def safe_log10(values):
+	return np.array([np.log10(value) if value != 0 else 0 for value in values]).ravel()
+
+
+# == Script takes roughly 20 minutes to run on my pc ==
 # Rows 531 through 536 belong to dataset 123, which has (for unknown reason) infinite Kurtosis 
 # try to find out why you have to delete 530~534 instead
-data = utils.load_file('metadata.txt', rows_to_ignore=[0,*range(530,535)], columns_to_ignore=[0, 1, *range(46,72,3), *range(50,66,3)], seperator=",")#*range(46,78)],seperator=",")#
-column_names = utils.load_file('metadata.txt', rows_to_ignore=[*range(1,736)], columns_to_ignore=[0,1, *range(46,72,3), *range(50,66,3)], seperator=",")#*range(46,78)],seperator=",")#
+data = utils.load_file('metadata.txt',
+					   rows_to_ignore=[0, *range(530, 535)],
+					   columns_to_ignore=[0, 1, *range(46, 72, 3), *range(50, 66, 3)],
+					   seperator=",")  #*range(46,78)],seperator=",")
+column_names = utils.load_file('metadata.txt',
+							   rows_to_ignore=[*range(1, 736)],
+							   columns_to_ignore=[0, 1, *range(46, 72, 3), *range(50, 66, 3)],
+							   seperator=",")  #*range(46,78)],seperator=",")#
 data = data.astype(dtype=float)
 
 target_columns = range(data.shape[1] - 7, data.shape[1])
-X, y_rf, y_svc, y_tree, y_nb, y_boosting, y_lr, y_knn = np.split(data, target_columns, axis = 1)
+X, *classifiers = np.split(data, target_columns, axis=1)
+classifiers = [safe_log10(ys) for ys in classifiers]
 
-y_rf = np.array([np.log10(y) if y != 0 else 0 for y in y_rf]).ravel()
-y_svc = np.array([np.log10(y) if y != 0 else 0 for y in y_svc]).ravel()
-y_tree = np.array([np.log10(y) if y != 0 else 0 for y in y_tree]).ravel()
-y_nb = np.array([np.log10(y) if y != 0 else 0 for y in y_nb]).ravel()
-y_boosting = np.array([np.log10(y) if y != 0 else 0 for y in y_boosting]).ravel()
-y_lr = np.array([np.log10(y) if y != 0 else 0 for y in y_lr]).ravel()
-y_knn = np.array([np.log10(y) if y != 0 else 0 for y in y_knn]).ravel()
-classifiers = [y_rf, y_svc, y_tree, y_nb, y_boosting, y_lr, y_knn]
-
-mad_values = np.empty(shape=(5,len(classifiers)))
-rmse_values = np.empty(shape=(5,len(classifiers)))
-
+mad_values = np.empty(shape=(5, len(classifiers)))
+rmse_values = np.empty(shape=(5, len(classifiers)))
 
 # Evaluate final regression
 for j, target in enumerate(classifiers):
