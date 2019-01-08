@@ -26,10 +26,16 @@ def regressor_prediction(X, y, regressor_constructor):
     predictions = np.ones(y.shape)
     for i, y_i in enumerate(y):
         print("LOOCV {} of {}".format(i, len(y)))
+        # find dataset id
+        dataset_id = X[i, 0]
+
         # We create a LOOCV-split
-        X_train = np.delete(X, i, 0)
-        X_test = X[i,:].reshape(1,-1)
-        y_train = np.delete(y, i, 0).ravel()
+        X_train = np.delete(X, np.where(X[:, 0] == dataset_id), 0)
+        y_train = np.delete(y, np.where(X[:, 0] == dataset_id), 0).ravel()
+        X_test = X[i, :].reshape(1, -1)
+
+        # remove dataset id column
+        X_train, X_test = X_train[:, 1:], X_test[:, 1:]
 
         regressor = regressor_constructor()
         regressor.fit(X_train, y_train)
@@ -47,7 +53,7 @@ def safe_log10(values):
 # try to find out why you have to delete 530~534 instead
 data = utils.load_file('metadata.txt',
                        rows_to_ignore=[0, *range(530, 535)],
-                       columns_to_ignore=[0, 1, *range(46, 72, 3), *range(50, 66, 3)],
+                       columns_to_ignore=[1, *range(46, 72, 3), *range(50, 66, 3)],
                        seperator=",")  #*range(46,78)],seperator=",")
 column_names = utils.load_file('metadata.txt',
                                rows_to_ignore=[*range(1, 736)],
